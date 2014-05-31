@@ -1,64 +1,221 @@
 package x40241.brent.westmoreland.a3;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import x40241.brent.westmoreland.a3.model.StockInfo;
 import android.app.Activity;
-import android.app.ActionBar;
-import android.app.Fragment;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.os.Build;
+import android.widget.BaseAdapter;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.TextView;
 
-public class MainActivity extends Activity {
 
+
+public class MainActivity extends Activity
+{
+	
+	/**
+	 * iVars
+	 */
+	
+	private static final String LOGTAG = "MainActivity";
+	private CustomListAdapter mListAdapter;
+	private ListView mListView;
+	private Intent mServiceIntent;
+	private BroadcastReceiver mStockDataReceiver;
+	private List<StockInfo> mStockList;
+	
+
+	/**
+	 * Lifecycle
+	 */
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-
-		if (savedInstanceState == null) {
-			getFragmentManager().beginTransaction()
-					.add(R.id.container, new PlaceholderFragment()).commit();
-		}
+		startService(getServiceIntent());
+		getListView();
+	}
+	
+	@Override
+	protected void onDestroy() {
+		stopService(getServiceIntent());
+		super.onDestroy();
 	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-
-		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
+	
+	@Override
+	protected void onStart() {
+		super.onStart();
+		LocalBroadcastManager
+			.getInstance(getApplicationContext())
+			.registerReceiver(getStockDataReceiver(),new IntentFilter(StockServiceImpl.STOCK_SERVICE_INTENT));
+	}
+	
+	@Override
+	protected void onStop() {
+		super.onStop();
+		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(getStockDataReceiver());
+	}
+	
+	/**
+	 * ActionBar
+	 */
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle action bar item clicks here. The action bar will
-		// automatically handle clicks on the Home/Up button, so long
-		// as you specify a parent activity in AndroidManifest.xml.
 		int id = item.getItemId();
-		if (id == R.id.action_settings) {
-			return true;
+		if (id == R.id.action_search) {
+			return search();
 		}
 		return super.onOptionsItemSelected(item);
 	}
+	
+	private boolean search(){
+		Log.d(LOGTAG, "I searched.");
+		Intent searchIntent = new Intent(getApplicationContext(), SearchActivity.class);
+		//put an extra into the intent if it makes sense
+		startActivity(searchIntent);
+		return true;
+	}
+	
+	/**
+	 * Lazy Getters
+	 */
+	
+	protected CustomListAdapter getListAdapter() {
+		if (mListAdapter == null){
+			mListAdapter = new CustomListAdapter(this);
+		}
+		return mListAdapter;
+	}
+
+	protected ListView getListView() {
+		if (mListView == null){
+			mListView = (ListView)findViewById(R.id.list_view);
+			mListView.setAdapter(getListAdapter());
+		}
+		return mListView;
+	}
+	
+	protected Intent getServiceIntent() {
+		if (mServiceIntent == null) {
+			mServiceIntent = new Intent(this, StockServiceImpl.class);
+		}
+		return mServiceIntent;
+	}
+	
+	protected BroadcastReceiver getStockDataReceiver(){
+		if (mStockDataReceiver == null){
+			mStockDataReceiver = new BroadcastReceiver() {
+				@Override
+				public void onReceive(Context context, Intent intent) {
+					Log.d(LOGTAG, "Received message");
+					if(intent.getSerializableExtra(StockServiceImpl.STOCK_SERVICE_INTENT) instanceof ArrayList) {
+						@SuppressWarnings("unchecked")
+						List<StockInfo> serializableExtra = ((List<StockInfo>)intent.getSerializableExtra(StockServiceImpl.STOCK_SERVICE_INTENT));
+						mStockList = serializableExtra;
+					}
+					getListAdapter().setList(mStockList);
+					getListAdapter().notifyDataSetChanged();
+				}
+			};
+		}
+		return mStockDataReceiver;
+	}
+
 
 	/**
-	 * A placeholder fragment containing a simple view.
+	 * ListAdapter
 	 */
-	public static class PlaceholderFragment extends Fragment {
+	
+	private class CustomListAdapter extends BaseAdapter {
+		
+        private Context          mContext;
+        private List<StockInfo>  mList;
+        private LayoutInflater   mLayoutInflater;
+        
+        CustomListAdapter(Context context) {
+            this.mContext = context;
+            this.mList = new ArrayList<StockInfo>();
+        }
+        
+        public void setList(List<StockInfo> list){
+        	this.mList = list;
+        }
 
-		public PlaceholderFragment() {
+		@Override
+		public int getCount() {
+            return ((mList == null) ? 0 : mList.size());
 		}
 
 		@Override
-		public View onCreateView(LayoutInflater inflater, ViewGroup container,
-				Bundle savedInstanceState) {
-			View rootView = inflater.inflate(R.layout.fragment_main, container,
-					false);
-			return rootView;
+		public Object getItem(int position) {
+			return mList.get(position);
 		}
-	}
 
+		@Override
+		public long getItemId(int position) {
+			return position;
+		}
+		
+        class ViewHolder {
+            TextView  symbolTextView;
+            TextView  nameTextView;
+            TextView    priceTextView;
+        }
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			ViewHolder holder = null;
+	            
+            if (convertView != null)
+                holder = (ViewHolder) convertView.getTag();
+            if (holder == null) // not the right view
+                convertView = null;
+            if (convertView == null) {
+                convertView = (LinearLayout) getLayoutInflator().inflate(R.layout.list_item, null);
+                holder = new ViewHolder();
+                holder.symbolTextView = (TextView) convertView.findViewById(R.id.symbolTextView);
+                holder.nameTextView = (TextView) convertView.findViewById(R.id.nameTextView);
+                holder.priceTextView  = (TextView) convertView.findViewById(R.id.priceTextView);
+                convertView.setTag(holder);
+            }
+            else holder = (ViewHolder) convertView.getTag();
+            
+            StockInfo stock = mList.get(position);
+            holder.symbolTextView.setText(stock.getSymbol());
+            holder.nameTextView.setText(stock.getName());
+            holder.priceTextView.setText(stock.getPrice() + "");
+            return convertView;
+		}
+        
+        private LayoutInflater getLayoutInflator() {
+            if (mLayoutInflater == null) {
+                mLayoutInflater = (LayoutInflater)
+                    this.mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            }
+            return mLayoutInflater;
+        }
+		
+	}
 }
