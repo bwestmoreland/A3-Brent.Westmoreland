@@ -149,7 +149,8 @@ public final class StockDataSAX
             return;
         }
         if (localName.equals("price")) {
-            stockInfo.setPrice(value);
+        	String sanitizedValue = value.replaceAll("[,]", "");
+            stockInfo.setPrice(Float.parseFloat(sanitizedValue));
             return;
         }
     }

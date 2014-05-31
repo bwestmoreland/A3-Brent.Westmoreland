@@ -270,7 +270,7 @@ public class StockServiceImpl
         StockInfo networkErrorStockInfo = new StockInfo();
         networkErrorStockInfo.setSymbol("Please ");
         networkErrorStockInfo.setName("check your Internet connection");
-        networkErrorStockInfo.setPrice("");
+        networkErrorStockInfo.setPrice(null);
         dummyList.add(networkErrorStockInfo);
         return dummyList;
     }

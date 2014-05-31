@@ -9,7 +9,7 @@ public final class StockInfo
     private long   sequence;
     private String  name;
     private String  symbol;
-    private String  price;
+    private Float  price;
     
     public long getSequence() {
         return sequence;
@@ -29,10 +29,10 @@ public final class StockInfo
     public void setSymbol (String symbol) {
         this.symbol = symbol;
     }
-    public String getPrice() {
+    public Float getPrice() {
         return price;
     }
-    public void setPrice (String price) {
+    public void setPrice (Float price) {
         this.price = price;
     }
 }
