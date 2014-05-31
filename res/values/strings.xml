@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">A2-Brent.Westmoreland</string>
-    <string name="copy">Copy!</string>
+    <string name="app_name">A3-Brent.Westmoreland</string>
     <string name="stock_service_started">Stock Service Started</string>
     <string name="stock_service_label">Stock Service</string>
     <string name="action_search">Search</string>
