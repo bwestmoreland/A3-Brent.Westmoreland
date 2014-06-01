@@ -1,15 +1,21 @@
 package x40241.brent.westmoreland.a3;
 
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import x40241.brent.westmoreland.a3.model.StockInfo;
+import x40241.brent.westmoreland.a3.StockServiceImpl.LocalBinder;
+import x40241.brent.westmoreland.a3.model.StockSummary;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -17,10 +23,14 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.BaseAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextSwitcher;
 import android.widget.TextView;
+import android.widget.ViewSwitcher.ViewFactory;
 
 
 
@@ -36,7 +46,9 @@ public class MainActivity extends Activity
 	private ListView mListView;
 	private Intent mServiceIntent;
 	private BroadcastReceiver mStockDataReceiver;
-	private List<StockInfo> mStockList;
+	private List<StockSummary> mStockList;
+	private boolean isBound = false;
+	private StockServiceImpl mService;
 	
 
 	/**
@@ -69,12 +81,17 @@ public class MainActivity extends Activity
 		LocalBroadcastManager
 			.getInstance(getApplicationContext())
 			.registerReceiver(getStockDataReceiver(),new IntentFilter(StockServiceImpl.STOCK_SERVICE_INTENT));
+		bindService(getServiceIntent(), mServiceConnection, Context.BIND_AUTO_CREATE);
 	}
 	
 	@Override
 	protected void onStop() {
 		super.onStop();
 		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(getStockDataReceiver());
+		if (isBound) {
+			unbindService(mServiceConnection);
+			isBound = false;
+		}
 	}
 	
 	/**
@@ -130,10 +147,8 @@ public class MainActivity extends Activity
 				@Override
 				public void onReceive(Context context, Intent intent) {
 					Log.d(LOGTAG, "Received message");
-					if(intent.getSerializableExtra(StockServiceImpl.STOCK_SERVICE_INTENT) instanceof ArrayList) {
-						@SuppressWarnings("unchecked")
-						List<StockInfo> serializableExtra = ((List<StockInfo>)intent.getSerializableExtra(StockServiceImpl.STOCK_SERVICE_INTENT));
-						mStockList = serializableExtra;
+					if(intent.getSerializableExtra(StockServiceImpl.STOCK_SERVICE_INTENT) == StockServiceImpl.STOCK_DATA_AVAILABLE) {
+						mStockList = mService.getStockSummary();
 					}
 					getListAdapter().setList(mStockList);
 					getListAdapter().notifyDataSetChanged();
@@ -142,6 +157,27 @@ public class MainActivity extends Activity
 		}
 		return mStockDataReceiver;
 	}
+	
+	/**
+	 * ServiceConnection
+	 */
+	
+	private ServiceConnection mServiceConnection = new ServiceConnection() {
+		
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			LocalBinder binder = (LocalBinder)service;
+			mService = binder.getService();
+			isBound = true;
+		}
+		
+		@Override
+		public void onServiceDisconnected(ComponentName name) {
+			
+			mService = null;
+			isBound = false;
+		}
+	};
 
 
 	/**
@@ -151,15 +187,16 @@ public class MainActivity extends Activity
 	private class CustomListAdapter extends BaseAdapter {
 		
         private Context          mContext;
-        private List<StockInfo>  mList;
+        private List<StockSummary>  mList;
         private LayoutInflater   mLayoutInflater;
+        private ViewFactory	mPriceViewFactory;
         
         CustomListAdapter(Context context) {
             this.mContext = context;
-            this.mList = new ArrayList<StockInfo>();
+            this.mList = new ArrayList<StockSummary>();
         }
         
-        public void setList(List<StockInfo> list){
+        public void setList(List<StockSummary> list){
         	this.mList = list;
         }
 
@@ -181,13 +218,13 @@ public class MainActivity extends Activity
         class ViewHolder {
             TextView  symbolTextView;
             TextView  nameTextView;
-            TextView    priceTextView;
+            TextSwitcher priceTextSwitcher;
         }
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			ViewHolder holder = null;
-	            
+			
             if (convertView != null)
                 holder = (ViewHolder) convertView.getTag();
             if (holder == null) // not the right view
@@ -197,16 +234,42 @@ public class MainActivity extends Activity
                 holder = new ViewHolder();
                 holder.symbolTextView = (TextView) convertView.findViewById(R.id.symbolTextView);
                 holder.nameTextView = (TextView) convertView.findViewById(R.id.nameTextView);
-                holder.priceTextView  = (TextView) convertView.findViewById(R.id.priceTextView);
+                holder.priceTextSwitcher  = (TextSwitcher) convertView.findViewById(R.id.priceTextSwitcher);
+                holder.priceTextSwitcher.setFactory(getPriceViewFactory());
+                holder.priceTextSwitcher.setInAnimation(getInAnimation());
+                holder.priceTextSwitcher.setOutAnimation(getOutAnimation());
                 convertView.setTag(holder);
             }
             else holder = (ViewHolder) convertView.getTag();
             
-            StockInfo stock = mList.get(position);
+            StockSummary stock = mList.get(position);
             holder.symbolTextView.setText(stock.getSymbol());
             holder.nameTextView.setText(stock.getName());
-            holder.priceTextView.setText(stock.getPrice() + "");
+            DecimalFormat df = new DecimalFormat("##.##");
+            df.setRoundingMode(RoundingMode.DOWN);
+            holder.priceTextSwitcher.setText(df.format(stock.getAvg()) + "");
             return convertView;
+		}
+		
+		private ViewFactory getPriceViewFactory(){
+			if (mPriceViewFactory == null) {
+				mPriceViewFactory = new ViewFactory() {
+					@Override
+					public View makeView() {
+						TextView priceView = new TextView(MainActivity.this);
+						return priceView;
+					}
+				};	
+			}
+			return mPriceViewFactory;
+		}
+		
+		private Animation getInAnimation(){
+			return AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.slide_in_left);
+		}
+		
+		private Animation getOutAnimation(){
+			return AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.slide_out_right);
 		}
         
         private LayoutInflater getLayoutInflator() {

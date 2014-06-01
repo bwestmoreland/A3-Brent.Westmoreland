@@ -124,6 +124,7 @@ public final class StockDataSAX
         }
         if (localName.equals(DATA_START_END_ELEMENT)) {
             if (DEBUG) Log.d (LOGTAG, "***  END OF DATA ITEM");
+            stockInfo.setSequence(sequence);
             list.add(stockInfo);
             stockInfo = null;
             return;
@@ -152,6 +153,9 @@ public final class StockDataSAX
         	String sanitizedValue = value.replaceAll("[,]", "");
             stockInfo.setPrice(Float.parseFloat(sanitizedValue));
             return;
+        }
+        if (localName.equals("sequence")) {
+        	sequence = Long.parseLong(value);
         }
     }
 }

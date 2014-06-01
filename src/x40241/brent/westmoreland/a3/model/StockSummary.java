@@ -4,13 +4,17 @@ package x40241.brent.westmoreland.a3.model;
 /**
  * @author Jeffrey Peacock (Jeffrey.Peacock@uci.edu)
  */
-public final class StockInfo
+public final class StockSummary
 {
 	private long mId;
 	private long   mSequence;
     private String  mName;
     private String  mSymbol;
     private Float  mPrice;
+    private Float mMax;
+    private Float mMin;
+    private Float mAvg;
+    private long mCount;
     private long mModified;
     
     public long getId() {
@@ -45,7 +49,39 @@ public final class StockInfo
     public void setPrice (Float price) {
         this.mPrice = price;
     }
-    
+
+	public Float getMax() {
+		return mMax;
+	}
+	
+	public void setMax(Float max) {
+		mMax = max;
+	}
+
+	public Float getMin() {
+		return mMin;
+	}
+
+	public void setMin(Float min) {
+		mMin = min;
+	}
+
+	public Float getAvg() {
+		return mAvg;
+	}
+
+	public void setAvg(Float avg) {
+		mAvg = avg;
+	}
+
+	public long getCount() {
+		return mCount;
+	}
+
+	public void setCount(long count) {
+		mCount = count;
+	}
+
 	public long getModified() {
 		return mModified;
 	}

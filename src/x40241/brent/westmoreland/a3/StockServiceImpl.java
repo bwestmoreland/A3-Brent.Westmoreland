@@ -12,7 +12,11 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import x40241.brent.westmoreland.a3.db.StockDatabaseHelper;
+import x40241.brent.westmoreland.a3.db.StockDatabaseHelper.StockCursor;
+import x40241.brent.westmoreland.a3.model.PriceData;
 import x40241.brent.westmoreland.a3.model.StockInfo;
+import x40241.brent.westmoreland.a3.model.StockSummary;
 import x40241.brent.westmoreland.a3.net.StockDataSAX;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -37,7 +41,103 @@ public class StockServiceImpl
     private static final boolean DEBUG = true;
     
     public static final String STOCK_SERVICE_INTENT = "x40241.brent.westmoreland.a2.STOCK_SERVICE";
-    public static final String STOCK_SERVICE_URL = "http://wonkware01.appspot.com/stocks.do";    
+    public static final String STOCK_DATA_AVAILABLE = "NEW DATA";
+    public static final String STOCK_SERVICE_URL = "http://wonkware01.appspot.com/stocks.do";
+    
+    private StockDatabaseHelper mHelper;
+    
+    /**
+     * Public API
+     */
+    
+    public class LocalBinder extends Binder {
+        public StockServiceImpl getService() {
+            return StockServiceImpl.this;
+        }
+    }
+    
+    public static Intent getServiceIntent() {
+        Intent intent = new Intent(STOCK_SERVICE_INTENT);
+        return intent;
+    }
+    
+    public List<StockSummary> getStockSummary(){
+    	List<StockSummary> list = new ArrayList<StockSummary>();
+        StockCursor cursor = mHelper.queryStocks();
+        if (cursor.moveToFirst())
+        {
+            do
+            {
+            	list.add(cursor.getSummary());
+            }
+            while (cursor.moveToNext());
+        }
+        if (cursor != null && !cursor.isClosed())
+        {
+            cursor.close();
+        }
+        return list;
+    }
+    
+    /**
+     * Database Support
+     */
+    
+	private void update (final List<StockInfo> list) {
+
+	    for (final StockInfo stockInfo : list) {
+	        StockSummary stockSummary = queryBySymbol(stockInfo.getSymbol());  // cache or db operation
+	        if (stockSummary == null)
+	            stockSummary = add(stockInfo);  // stockInfo now has db id in it.
+	        else {
+	            final float price = stockInfo.getPrice();
+	            stockSummary.setPrice(price);
+	            final long count = stockSummary.getCount();
+	            stockSummary.setCount(count+1);
+	            stockSummary.setMin(Math.min(stockSummary.getMin(), price));
+	            stockSummary.setMax(Math.max(stockSummary.getMax(), price));
+	            stockSummary.setAvg(((stockSummary.getAvg()*count)+price)/(count+1));
+	            stockSummary.setModified(stockInfo.getSequence());  // I have extra field to track modified time
+	            if (update(stockSummary) == 1)  // should be 1 for 1 record updated
+	            	Log.d(LOGTAG, "update succeeded");
+	        }
+	        final PriceData priceData = new PriceData();
+	        priceData.setStockId(stockSummary.getId());
+	        priceData.setTimestamp(stockInfo.getSequence());
+	        priceData.setPrice(stockInfo.getPrice());
+	        priceData.setId(insert(priceData));  // inserts price data directly to db; sets id for completeness
+	    }
+	}
+	
+	private int update(final StockSummary stockSummary){
+		return mHelper.updateStockSummary(stockSummary);
+	}
+	
+	private StockSummary add(StockInfo stockInfo){
+		return mHelper.insertStockInfo(stockInfo);
+	}
+	
+	private long insert(PriceData priceData){
+		return mHelper.insertPriceData(priceData);
+	}
+	
+	private StockSummary queryBySymbol(String stockSymbol){
+		StockSummary summary = null;
+		StockCursor cursor = mHelper.queryStocks(stockSymbol);
+        if (cursor.moveToFirst())
+        {
+            do
+            {
+            	summary = cursor.getSummary();
+            }
+            while (cursor.moveToNext());
+        }
+        if (cursor != null && !cursor.isClosed())
+        {
+            cursor.close();
+        }
+		return summary;
+	}
     
     /**
      * Notifications
@@ -73,16 +173,15 @@ public class StockServiceImpl
 		@Override
 		public void run() {
 		    List<StockInfo> list = getStockData();
+		    update(list);
 			Log.d("sender", "Broadcasting message");
 			Intent intent = new Intent(STOCK_SERVICE_INTENT);
-			intent.putExtra(STOCK_SERVICE_INTENT, (ArrayList<StockInfo>)list);
+			intent.putExtra(STOCK_SERVICE_INTENT, STOCK_DATA_AVAILABLE);
 			LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
 		}
     }
     
     private StockListTimerTask mStockTimerTask;
-    
-    
     
     // Track if we've been started at least once.
     private boolean isInitialized = false;
@@ -93,35 +192,13 @@ public class StockServiceImpl
     // This is the object that receives interactions from clients.
     private final IBinder localBinder = new LocalBinder();
     
-    
-    /**
-     * Class for clients to access. Because we know this service always runs in
-     * the same process as its clients, we don't need to deal with IPC.
-     */
-    public class LocalBinder extends Binder {
-        public StockServiceImpl getService() {
-            return StockServiceImpl.this;
-        }
-    }
-    
-    /**
-     *  Constructs the explicit Intent to use to start this service.
-     *  Placing this construction here encapsulates the info and allows other classes easy use.
-     *  
-     * @param context
-     * @param client
-     * @return
-     */
-    public static Intent getServiceIntent() {
-        Intent intent = new Intent(STOCK_SERVICE_INTENT);
-        return intent;
-    }
-    
+      
     /**
      * Setup and Teardown
      */
     
     private void initialize(){
+    	mHelper = new StockDatabaseHelper(getApplicationContext());
     	mStockTimerTask = new StockListTimerTask();
     	mStockTimer = new Timer();
     	mStockTimer.schedule(mStockTimerTask, 1000, 5000);
@@ -132,6 +209,7 @@ public class StockServiceImpl
     	mStockTimer.cancel();
     	mStockTimer = null;
     	mStockTimerTask = null;
+    	mHelper = null;
     	isInitialized = false;
     }
     
@@ -270,7 +348,6 @@ public class StockServiceImpl
         StockInfo networkErrorStockInfo = new StockInfo();
         networkErrorStockInfo.setSymbol("Please ");
         networkErrorStockInfo.setName("check your Internet connection");
-        networkErrorStockInfo.setPrice(null);
         dummyList.add(networkErrorStockInfo);
         return dummyList;
     }
