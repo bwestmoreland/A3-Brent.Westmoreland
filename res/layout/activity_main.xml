@@ -3,7 +3,9 @@
     android:id="@+id/viewSwitcher"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="x40241.brent.westmoreland.a2.MainActivity" >
+    android:padding="8dp"
+    tools:context="x40241.brent.westmoreland.a2.MainActivity"
+ >
 
     <ListView
         android:id="@+id/summaryListView"
