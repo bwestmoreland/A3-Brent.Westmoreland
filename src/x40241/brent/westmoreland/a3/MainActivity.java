@@ -25,11 +25,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextSwitcher;
 import android.widget.TextView;
+import android.widget.ViewSwitcher;
 import android.widget.ViewSwitcher.ViewFactory;
 
 
@@ -42,13 +45,20 @@ public class MainActivity extends Activity
 	 */
 	
 	private static final String LOGTAG = "MainActivity";
-	private CustomListAdapter mListAdapter;
+	private CustomListAdapter mSummaryListAdapter;
+	private ViewSwitcher mViewSwitcher;
 	private ListView mListView;
 	private Intent mServiceIntent;
 	private BroadcastReceiver mStockDataReceiver;
 	private List<StockSummary> mStockList;
 	private boolean isBound = false;
 	private StockServiceImpl mService;
+	private TextView mDetailSymbolTextView;
+	private TextView mDetailNameTextView;
+	private TextView mDetailPriceTextView;
+	private TextView mDetailMinTextView;
+	private TextView mDetailMaxTextView;
+	private TextView mDetailAvgTextView;
 	
 
 	/**
@@ -60,7 +70,20 @@ public class MainActivity extends Activity
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		startService(getServiceIntent());
-		getListView();
+		getListView().setOnItemClickListener(new OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view,
+					int position, long id) {
+				StockSummary summary = (StockSummary)getListAdapter().getItem(position);
+				getDetailSymbolTextView().setText(summary.getSymbol());
+				getDetailNameTextView().setText(summary.getName());
+				getDetailMinTextView().setText(summary.getMin() + "");
+				getDetailMaxTextView().setText(summary.getMax() +"");
+				getDetailAvgTextView().setText(summary.getAvg() + "");
+				getDetailPriceTextView().setText(summary.getPrice() +"");
+				getViewSwitcher().showNext();
+			}
+		});
 	}
 	
 	@Override
@@ -95,6 +118,20 @@ public class MainActivity extends Activity
 	}
 	
 	/**
+	 * OnBack Override
+	 */
+	
+	@Override
+	public void onBackPressed() {
+		if (getViewSwitcher().getNextView() == getListView()){
+			getViewSwitcher().showPrevious();
+		}
+		else {
+			super.onBackPressed();
+		}
+	}
+	
+	/**
 	 * ActionBar
 	 */
 
@@ -120,15 +157,15 @@ public class MainActivity extends Activity
 	 */
 	
 	protected CustomListAdapter getListAdapter() {
-		if (mListAdapter == null){
-			mListAdapter = new CustomListAdapter(this);
+		if (mSummaryListAdapter == null){
+			mSummaryListAdapter = new CustomListAdapter(this);
 		}
-		return mListAdapter;
+		return mSummaryListAdapter;
 	}
 
 	protected ListView getListView() {
 		if (mListView == null){
-			mListView = (ListView)findViewById(R.id.list_view);
+			mListView = (ListView)findViewById(R.id.summaryListView);
 			mListView.setAdapter(getListAdapter());
 		}
 		return mListView;
@@ -158,6 +195,65 @@ public class MainActivity extends Activity
 		return mStockDataReceiver;
 	}
 	
+	protected ViewSwitcher getViewSwitcher(){
+		if (mViewSwitcher == null){
+			mViewSwitcher = (ViewSwitcher)findViewById(R.id.viewSwitcher);
+			mViewSwitcher.setInAnimation(getInAnimation());
+			mViewSwitcher.setOutAnimation(getOutAnimation());
+		}
+		return mViewSwitcher;
+	}
+	
+	public TextView getDetailSymbolTextView() {
+		if (mDetailSymbolTextView == null){
+			mDetailSymbolTextView = (TextView)findViewById(R.id.detailSymbolTextView);
+		}
+		return mDetailSymbolTextView;
+	}
+
+	public TextView getDetailNameTextView() {
+		if (mDetailNameTextView == null){
+			mDetailNameTextView = (TextView)findViewById(R.id.detailNameTextView);
+		}
+		return mDetailNameTextView;
+	}
+
+	public TextView getDetailPriceTextView() {
+		if (mDetailPriceTextView == null){
+			mDetailPriceTextView = (TextView)findViewById(R.id.detailPriceTextView);
+		}
+		return mDetailPriceTextView;
+	}
+
+	public TextView getDetailMinTextView() {
+		if (mDetailMinTextView == null){
+			mDetailMinTextView = (TextView)findViewById(R.id.detailMinTextView);
+		}
+		return mDetailMinTextView;
+	}
+
+	public TextView getDetailMaxTextView() {
+		if (mDetailMaxTextView == null){
+			mDetailMaxTextView = (TextView)findViewById(R.id.detailMaxTextView);
+		}
+		return mDetailMaxTextView;
+	}
+
+	public TextView getDetailAvgTextView() {
+		if (mDetailAvgTextView == null){
+			mDetailAvgTextView = (TextView)findViewById(R.id.detailAvgTextView);
+		}
+		return mDetailAvgTextView;
+	}
+	
+	private Animation getInAnimation(){
+		return AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.slide_in_left);
+	}
+	
+	private Animation getOutAnimation(){
+		return AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.slide_out_right);
+	}
+
 	/**
 	 * ServiceConnection
 	 */
@@ -230,7 +326,7 @@ public class MainActivity extends Activity
             if (holder == null) // not the right view
                 convertView = null;
             if (convertView == null) {
-                convertView = (LinearLayout) getLayoutInflator().inflate(R.layout.list_item, null);
+                convertView = (LinearLayout) getLayoutInflator().inflate(R.layout.summary_list_item, null);
                 holder = new ViewHolder();
                 holder.symbolTextView = (TextView) convertView.findViewById(R.id.symbolTextView);
                 holder.nameTextView = (TextView) convertView.findViewById(R.id.nameTextView);
@@ -242,12 +338,12 @@ public class MainActivity extends Activity
             }
             else holder = (ViewHolder) convertView.getTag();
             
-            StockSummary stock = mList.get(position);
+            final StockSummary stock = mList.get(position);
             holder.symbolTextView.setText(stock.getSymbol());
             holder.nameTextView.setText(stock.getName());
             DecimalFormat df = new DecimalFormat("##.##");
             df.setRoundingMode(RoundingMode.DOWN);
-            holder.priceTextSwitcher.setText(df.format(stock.getAvg()) + "");
+            holder.priceTextSwitcher.setText(df.format(stock.getPrice()) + "");
             return convertView;
 		}
 		
@@ -262,14 +358,6 @@ public class MainActivity extends Activity
 				};	
 			}
 			return mPriceViewFactory;
-		}
-		
-		private Animation getInAnimation(){
-			return AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.slide_in_left);
-		}
-		
-		private Animation getOutAnimation(){
-			return AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.slide_out_right);
 		}
         
         private LayoutInflater getLayoutInflator() {

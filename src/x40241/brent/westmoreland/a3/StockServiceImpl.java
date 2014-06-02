@@ -94,13 +94,19 @@ public class StockServiceImpl
 	            stockSummary.setPrice(price);
 	            final long count = stockSummary.getCount();
 	            stockSummary.setCount(count+1);
-	            stockSummary.setMin(Math.min(stockSummary.getMin(), price));
+	            if (stockSummary.getMin() == 0){
+	            	stockSummary.setMin(price);
+	            }
+	            else {
+	            	stockSummary.setMin(Math.min(stockSummary.getMin(), price));
+	            }
 	            stockSummary.setMax(Math.max(stockSummary.getMax(), price));
 	            stockSummary.setAvg(((stockSummary.getAvg()*count)+price)/(count+1));
 	            stockSummary.setModified(stockInfo.getSequence());  // I have extra field to track modified time
 	            if (update(stockSummary) == 1)  // should be 1 for 1 record updated
 	            	Log.d(LOGTAG, "update succeeded");
 	        }
+	    
 	        final PriceData priceData = new PriceData();
 	        priceData.setStockId(stockSummary.getId());
 	        priceData.setTimestamp(stockInfo.getSequence());

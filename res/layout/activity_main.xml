@@ -1,17 +1,129 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ViewSwitcher xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/container"
+    android:id="@+id/viewSwitcher"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    tools:context="x40241.brent.westmoreland.a2.MainActivity"
-    >
-    
+    tools:context="x40241.brent.westmoreland.a2.MainActivity" >
+
     <ListView
-        android:id="@+id/list_view"
+        android:id="@+id/summaryListView"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" >
     </ListView>
-    
-</LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/detailView"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+            <TextView
+                android:id="@+id/detailSymbolLabel"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".30"
+                android:gravity="left|center"
+                android:text="@string/label_symbol" />
+            <TextView
+                android:id="@+id/detailSymbolTextView"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".70"
+                android:gravity="left|center" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+            <TextView
+                android:id="@+id/detailNameLabel"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".30"
+                android:gravity="left|center"
+                android:text="@string/label_name" />
+            <TextView
+                android:id="@+id/detailNameTextView"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".70"
+                android:gravity="left|center" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+            <TextView
+                android:id="@+id/detailPriceLabel"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".30"
+                android:gravity="left|center"
+                android:text="@string/label_price" />
+            <TextView
+                android:id="@+id/detailPriceTextView"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".70"
+                android:gravity="left|center" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+            <TextView
+                android:id="@+id/detailMinLabel"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".30"
+                android:gravity="left|center"
+                android:text="@string/label_min" />
+            <TextView
+                android:id="@+id/detailMinTextView"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".70"
+                android:gravity="left|center" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+            <TextView
+                android:id="@+id/detailMaxLabel"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".30"
+                android:gravity="left|center"
+                android:text="@string/label_max" />
+            <TextView
+                android:id="@+id/detailMaxTextView"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".70"
+                android:gravity="left|center" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+            <TextView
+                android:id="@+id/detailAvgLabel"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".30"
+                android:gravity="left|center"
+                android:text="@string/label_avg" />
+            <TextView
+                android:id="@+id/detailAvgTextView"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight=".70"
+                android:gravity="left|center" />
+        </LinearLayout>
+    </LinearLayout>
+
+</ViewSwitcher>

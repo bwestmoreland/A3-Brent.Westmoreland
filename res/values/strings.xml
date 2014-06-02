@@ -5,6 +5,10 @@
     <string name="stock_service_started">Stock Service Started</string>
     <string name="stock_service_label">Stock Service</string>
     <string name="action_search">Search</string>
-    <string name="action_copy">Copy</string>
-
+    <string name="label_symbol">SYMBOL</string>
+    <string name="label_name">NAME</string>
+    <string name="label_min">MIN</string>
+	<string name="label_max">MAX</string>
+	<string name="label_avg">AVG</string>
+	<string name="label_price">PRICE</string>
 </resources>

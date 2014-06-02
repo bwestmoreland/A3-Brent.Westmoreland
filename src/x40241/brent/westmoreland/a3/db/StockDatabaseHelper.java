@@ -12,7 +12,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class StockDatabaseHelper extends SQLiteOpenHelper {
 	private static final String DB_NAME = "stocks.sqlite";
-	private static final int VERSION = 5;
+	private static final int VERSION = 7;
 	
 	private static final String TABLE_STOCK = "stock_summary";
 	private static final String COLUMN_STOCK_ID = "_id";
@@ -52,7 +52,7 @@ public class StockDatabaseHelper extends SQLiteOpenHelper {
         	+ COLUMN_PRICE_ID + " INTEGER PRIMARY KEY, "
         	+ COLUMN_PRICE_PRICE + " REAL, "
         	+ COLUMN_PRICE_SEQUENCE + " INTEGER, "
-        	+ COLUMN_PRICE_STOCK_ID + " INTEGER, FOREIGN KEY(" + COLUMN_PRICE_STOCK_ID + ") REFERENCES " + TABLE_STOCK + "(" + COLUMN_STOCK_ID + ")" 
+        	+ COLUMN_PRICE_STOCK_ID + " INTEGER UNIQUE, FOREIGN KEY(" + COLUMN_PRICE_STOCK_ID + ") REFERENCES " + TABLE_STOCK + "(" + COLUMN_STOCK_ID + ")" 
         	+ ");");
 	}
 
@@ -83,7 +83,7 @@ public class StockDatabaseHelper extends SQLiteOpenHelper {
 		priceValues.put(COLUMN_PRICE_PRICE, priceData.getPrice());
 		priceValues.put(COLUMN_PRICE_SEQUENCE, priceData.getTimestamp());
 		priceValues.put(COLUMN_PRICE_STOCK_ID, priceData.getStockId());
-		return getWritableDatabase().insert(TABLE_PRICE, null, priceValues);
+		return getWritableDatabase().insertWithOnConflict(TABLE_PRICE, null, priceValues, SQLiteDatabase.CONFLICT_REPLACE);
 	}
 	
 	public StockSummary insertStockInfo(StockInfo stockInfo) {
@@ -115,28 +115,21 @@ public class StockDatabaseHelper extends SQLiteOpenHelper {
 	}
 	
 	public StockCursor queryStocks(){
-		Cursor wrapped = getReadableDatabase().query(
-				TABLE_STOCK,  	//Table
-				null, 			//Columns
-				null, 			//Selection
-				null, 			//Selection Args
-				null, 			//Group by
-				null,			//having 
-				COLUMN_STOCK_SYMBOL			//order by
-			);
+		Cursor wrapped = getReadableDatabase().rawQuery("SELECT " + TABLE_STOCK + ".*, " + TABLE_PRICE + "." + COLUMN_PRICE_PRICE 
+				+ " FROM " + TABLE_STOCK 
+				+ " INNER JOIN " + TABLE_PRICE
+				+ " ON " + TABLE_STOCK + "." + COLUMN_STOCK_ID + "=" + TABLE_PRICE + "." + COLUMN_PRICE_STOCK_ID 
+				+ " ORDER BY " + COLUMN_STOCK_SYMBOL, null);
+		
 		return new StockCursor(wrapped);
 	}
 	
 	public StockCursor queryStocks(String stockSymbol){
-		Cursor wrapped = getReadableDatabase().query(
-				TABLE_STOCK,  	//Table
-				null, 			//Columns
-				COLUMN_STOCK_SYMBOL + " = ?", 			//Selection
-				new String[] { stockSymbol }, 			//Selection Args
-				null, 			//Group by
-				null,			//having 
-				null			//order by
-			);
+		Cursor wrapped = getReadableDatabase().rawQuery("SELECT " + TABLE_STOCK + ".*, " + TABLE_PRICE + "." + COLUMN_PRICE_PRICE 
+				+ " FROM " + TABLE_STOCK
+				+ " INNER JOIN " + TABLE_PRICE
+				+ " ON " + TABLE_STOCK + "." + COLUMN_STOCK_ID + "=" + TABLE_PRICE + "." + COLUMN_PRICE_STOCK_ID 
+				+ " WHERE " + TABLE_STOCK + "." + COLUMN_STOCK_SYMBOL + "=?", new String[]{stockSymbol});
 		return new StockCursor(wrapped);
 	}
 	
@@ -153,14 +146,14 @@ public class StockDatabaseHelper extends SQLiteOpenHelper {
 				return null;
 			}
 			StockSummary summary = new StockSummary();
-			summary.setId( getLong(getColumnIndex(COLUMN_STOCK_ID)));
+			summary.setId(getLong(getColumnIndex(COLUMN_STOCK_ID)));
 			summary.setMax(getFloat(getColumnIndex(COLUMN_STOCK_MAX)));
 			summary.setMin(getFloat(getColumnIndex(COLUMN_STOCK_MIN)));
 			summary.setAvg(getFloat(getColumnIndex(COLUMN_STOCK_AVG)));
 			summary.setCount(getLong(getColumnIndex(COLUMN_STOCK_COUNT)));
 			summary.setName(getString(getColumnIndex(COLUMN_STOCK_NAME)));
 			summary.setSymbol(getString(getColumnIndex(COLUMN_STOCK_SYMBOL)));
-//			summary.setModified(getLong(getColumnIndex(COLUMN_STOCK_MODIFIED)));
+			summary.setPrice(getFloat(getColumnIndex(COLUMN_PRICE_PRICE)));
 			return summary;
 		}
 	}
