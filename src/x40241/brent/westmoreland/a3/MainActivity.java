@@ -59,6 +59,7 @@ public class MainActivity extends Activity
 	private TextView mDetailMinTextView;
 	private TextView mDetailMaxTextView;
 	private TextView mDetailAvgTextView;
+	private DecimalFormat mDecimalFormat;
 	
 
 	/**
@@ -79,7 +80,7 @@ public class MainActivity extends Activity
 				getDetailNameTextView().setText(summary.getName());
 				getDetailMinTextView().setText(summary.getMin() + "");
 				getDetailMaxTextView().setText(summary.getMax() +"");
-				getDetailAvgTextView().setText(summary.getAvg() + "");
+				getDetailAvgTextView().setText(getDecimalFormat().format(summary.getAvg()) + "");
 				getDetailPriceTextView().setText(summary.getPrice() +"");
 				getViewSwitcher().showNext();
 			}
@@ -254,6 +255,14 @@ public class MainActivity extends Activity
 		return AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.slide_out_right);
 	}
 
+	private DecimalFormat getDecimalFormat() {
+		if (mDecimalFormat == null){
+            mDecimalFormat = new DecimalFormat("##.##");
+            mDecimalFormat.setRoundingMode(RoundingMode.DOWN);
+		}
+		return mDecimalFormat;
+	}
+
 	/**
 	 * ServiceConnection
 	 */
@@ -341,9 +350,7 @@ public class MainActivity extends Activity
             final StockSummary stock = mList.get(position);
             holder.symbolTextView.setText(stock.getSymbol());
             holder.nameTextView.setText(stock.getName());
-            DecimalFormat df = new DecimalFormat("##.##");
-            df.setRoundingMode(RoundingMode.DOWN);
-            holder.priceTextSwitcher.setText(df.format(stock.getPrice()) + "");
+            holder.priceTextSwitcher.setText(getDecimalFormat().format(stock.getPrice()) + "");
             return convertView;
 		}
 		
